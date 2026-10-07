@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Библиотека книг</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        header {
+            background: #20232a;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        main {
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        input, select {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        input {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .books {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .book {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+        }
+
+        .book h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .book p {
+            margin: 8px 0;
+            color: #666;
+        }
+
+        .author {
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        #status {
+            margin-bottom: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>📚 Библиотека книг</h1>
+    <p>Книги и авторы из базы Supabase</p>
+</header>
+
+<main>
+
+    <div class="controls">
+        <input
+            type="text"
+            id="search"
+            placeholder="🔎 Поиск по книге или автору..."
+        >
+
+        <select id="sort">
+            <option value="title">По названию</option>
+            <option value="year">По году</option>
+            <option value="author">По автору</option>
+        </select>
+    </div>
+
+    <div id="status">Загрузка книг...</div>
+
+    <div class="books" id="books"></div>
+
+</main>
+
+<script>
+
+    const SUPABASE_URL = "https://igehcxrqbfivweguzdze.supabase.co/rest/v1/";
+    const SUPABASE_ANON_KEY = "sb_publishable_7koh696uGUiLZDH-UmwMag_dmORUrka";
+
+    let books = [];
+
+    async function loadBooks() {
+        try {
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/books?select=id,title,year,genre,authors(name,country)`,
+                {
+                    headers: {
+                        "apikey": SUPABASE_ANON_KEY,
+                        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error("Ошибка загрузки данных");
+            }
+
+            books = await response.json();
+
+            document.getElementById("status").textContent =
+                `Найдено книг: ${books.length}`;
+
+            renderBooks();
+
+        } catch (error) {
+            document.getElementById("status").textContent =
+                "Ошибка подключения к базе данных";
+            console.error(error);
+        }
+    }
+
+    function renderBooks() {
+        const search = document
+            .getElementById("search")
+            .value
+            .toLowerCase();
+
+        const sort = document.getElementById("sort").value;
+
+        let filtered = books.filter(book => {
+            const title = book.title.toLowerCase();
+            const author = book.authors?.name?.toLowerCase() || "";
+
+            return title.includes(search) || author.includes(search);
+        });
+
+        filtered.sort((a, b) => {
+            if (sort === "title") {
+                return a.title.localeCompare(b.title);
+            }
+
+            if (sort === "year") {
+                return a.year - b.year;
+            }
+
+            if (sort === "author") {
+                return (a.authors?.name || "")
+                    .localeCompare(b.authors?.name || "");
+            }
+        });
+
+        const container = document.getElementById("books");
+
+        container.innerHTML = filtered.map(book => `
+            <div class="book">
+                <h2>${book.title}</h2>
+
+                <p class="author">
+                    👤 ${book.authors?.name || "Неизвестный автор"}
+                </p>
+
+                <p>📅 Год: ${book.year}</p>
+                <p>📖 Жанр: ${book.genre}</p>
+
+                <p>
+                    🌍 Страна:
+                    ${book.authors?.country || "Не указана"}
+                </p>
+            </div>
+        `).join("");
+    }
+
+    document
+        .getElementById("search")
+        .addEventListener("input", renderBooks);
+
+    document
+        .getElementById("sort")
+        .addEventListener("change", renderBooks);
+
+    loadBooks();
+</script>
+
+</body>
+</html>
