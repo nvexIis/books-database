@@ -144,10 +144,10 @@
             renderBooks();
 
         } catch (error) {
-            document.getElementById("status").textContent =
-                "Ошибка подключения к базе данных";
-            console.error(error);
-        }
+    console.error(error);
+    document.getElementById("status").textContent =
+        "Ошибка: " + error.message;
+}
     }
 
     function renderBooks() {
